@@ -1,8 +1,7 @@
 import discord, json, requests
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
-from time import gmtime, strftime
-
+from time import strftime, localtime
 
 with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
@@ -21,12 +20,15 @@ bot.remove_command("help")
 
 
 def nowTime():
-    return strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    return strftime("%Y-%m-%d %H:%M:%S", localtime())
 
 
 @bot.event
 async def on_ready():
     print(f"目前登入身份 --> {bot.user}")
+    await bot.change_presence(
+        activity=discord.Activity(type=discord.ActivityType.watching, name="PTT /help")
+    )
     autoSend.start()
 
 
@@ -110,7 +112,6 @@ async def autoSend():
     r = requests.get(url, headers=headers)
     soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
     articles = soup.find_all("div", class_="r-ent")
-    newArticle = []
     for article in articles:
         url = article.find("a")["href"] if article.find("a") else ""
         if url == "":
@@ -122,18 +123,20 @@ async def autoSend():
             continue
         if "徵" in title:
             continue
-        ID = url.split("/")[-1].split(".html")[0]
-        if ID in historyData:
+        pageID = url.split("/")[-1].split(".html")[0]
+        userID = article.find("div", class_="author").text.strip()
+        if pageID in historyData:
             continue
         if searchList != []:
             for search in searchList:
                 if search in title:
                     articleData = {
-                        "date": article.find("div", class_="date").text.strip(),
                         "title": title,
                         "url": "https://www.ptt.cc" + url,
+                        "author": userID,
+                        "date": article.find("div", class_="date").text.strip(),
                     }
-                    historyData[ID] = articleData
+                    historyData[pageID] = articleData
                     with open("json/history.json", "w", encoding="utf-8") as f:
                         json.dump(historyData, f, indent=4)
                     channel = bot.get_channel(systemData["channel_id"])
@@ -143,8 +146,9 @@ async def autoSend():
                         color=discord.Colour.orange(),
                     )
                     embed.add_field(
-                        name="Date", value=articleData["date"], inline=False
+                        name="Author", value=articleData["author"], inline=True
                     )
+                    embed.add_field(name="Date", value=articleData["date"], inline=True)
                     returnString = ""
                     for search in searchList:
                         if search in title:
@@ -154,6 +158,7 @@ async def autoSend():
                         value=returnString,
                         inline=False,
                     )
+                    embed.set_footer(text=f"{nowTime()}")
                     await channel.send(embed=embed)
                     break
 

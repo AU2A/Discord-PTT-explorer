@@ -1,7 +1,6 @@
-import discord, json, requests
+import discord, json, requests, datetime
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
-from time import strftime, localtime
 
 with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
@@ -20,7 +19,9 @@ bot.remove_command("help")
 
 
 def nowTime():
-    return strftime("%Y-%m-%d %H:%M:%S", localtime())
+    return (datetime.datetime.utcnow() + datetime.timedelta(hours=+8)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
 @bot.event

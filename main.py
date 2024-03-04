@@ -19,9 +19,9 @@ bot.remove_command("help")
 
 
 def nowTime():
-    return (
-        datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=+8)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    return (datetime.datetime.utcnow() + datetime.timedelta(hours=+8)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
 @bot.event

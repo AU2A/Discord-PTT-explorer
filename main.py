@@ -19,9 +19,9 @@ bot.remove_command("help")
 
 
 def nowTime():
-    return (datetime.datetime.utcnow() + datetime.timedelta(hours=+8)).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
+    return (
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=+8)
+    ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 @bot.event
@@ -104,6 +104,37 @@ async def help(ctx, *args):
     await ctx.send(embed=embed)
 
 
+async def sendAritcle(pageID, articleData, historyData):
+    if searchList == []:
+        return
+    for search in searchList:
+        if not search in articleData["title"]:
+            continue
+        historyData[pageID] = articleData
+        with open("json/history.json", "w", encoding="utf-8") as f:
+            json.dump(historyData, f, indent=4)
+        channel = bot.get_channel(systemData["channel_id"])
+        embed = discord.Embed(
+            title=articleData["title"],
+            url=articleData["url"],
+            color=discord.Colour.orange(),
+        )
+        embed.add_field(name="Author", value=articleData["author"], inline=True)
+        embed.add_field(name="Date", value=articleData["date"], inline=True)
+        returnString = ""
+        for search in searchList:
+            if search in articleData["title"]:
+                returnString += search + " "
+        embed.add_field(
+            name="KeyWord",
+            value=returnString,
+            inline=False,
+        )
+        embed.set_footer(text=f"{nowTime()}")
+        await channel.send(embed=embed)
+        break
+
+
 @tasks.loop(seconds=20.0)
 async def autoSend():
     print(nowTime(), "autoSend")
@@ -128,40 +159,13 @@ async def autoSend():
         userID = article.find("div", class_="author").text.strip()
         if pageID in historyData:
             continue
-        if searchList != []:
-            for search in searchList:
-                if search in title:
-                    articleData = {
-                        "title": title,
-                        "url": "https://www.ptt.cc" + url,
-                        "author": userID,
-                        "date": article.find("div", class_="date").text.strip(),
-                    }
-                    historyData[pageID] = articleData
-                    with open("json/history.json", "w", encoding="utf-8") as f:
-                        json.dump(historyData, f, indent=4)
-                    channel = bot.get_channel(systemData["channel_id"])
-                    embed = discord.Embed(
-                        title=articleData["title"],
-                        url=articleData["url"],
-                        color=discord.Colour.orange(),
-                    )
-                    embed.add_field(
-                        name="Author", value=articleData["author"], inline=True
-                    )
-                    embed.add_field(name="Date", value=articleData["date"], inline=True)
-                    returnString = ""
-                    for search in searchList:
-                        if search in title:
-                            returnString += search + " "
-                    embed.add_field(
-                        name="KeyWord",
-                        value=returnString,
-                        inline=False,
-                    )
-                    embed.set_footer(text=f"{nowTime()}")
-                    await channel.send(embed=embed)
-                    break
+        articleData = {
+            "title": title,
+            "url": "https://www.ptt.cc" + url,
+            "author": userID,
+            "date": article.find("div", class_="date").text.strip(),
+        }
+        await sendAritcle(pageID, articleData, historyData)
 
 
 bot.run(systemData["TOKEN"])

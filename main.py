@@ -1,4 +1,4 @@
-import discord, json, requests, datetime
+import discord, json, requests, datetime, time
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
@@ -6,7 +6,8 @@ with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
 
 with open("json/search.json", "r", encoding="utf-8") as f:
-    searchList = json.load(f)["keyWord"]
+    searchList = json.load(f)
+
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
@@ -24,6 +25,10 @@ def nowTime():
     )
 
 
+def sleep():
+    time.sleep(0.1)
+
+
 @bot.event
 async def on_ready():
     print(f"目前登入身份 --> {bot.user}")
@@ -36,39 +41,54 @@ async def on_ready():
 @bot.command()
 async def add(ctx, *args):
     print(nowTime(), "add", args)
-    if len(args) == 0:
-        await ctx.send(f"Add What?")
-    else:
+    try:
+        if len(args) < 2:
+            raise
+        if args[0] not in searchList.keys():
+            raise
         response = ""
-        for arg in args:
-            if arg not in searchList:
-                searchList.append(arg)
+        for arg in args[1:]:
+            if arg not in searchList[args[0]]:
+                searchList[args[0]].append(arg)
                 response = (
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
         print(
-            json.dumps({"keyWord": searchList}, ensure_ascii=False),
+            json.dumps(searchList, ensure_ascii=False),
             end="",
             file=open("json/search.json", "w", encoding="utf-8"),
         )
         await ctx.send(f"Add {response} success!")
+    except:
+        embed = discord.Embed(
+            title="How to use **add** command",
+            description="/add [category] [keyWord] [keyWord] ...",
+            color=discord.Colour.orange(),
+        )
+        embed.add_field(
+            name="[category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+        )
+        embed.add_field(name="[keyWord]", value="What you want to search", inline=False)
+        await ctx.send(embed=embed)
 
 
 @bot.command()
 async def delete(ctx, *args):
     print(nowTime(), "delete", args)
-    if len(args) == 0:
-        await ctx.send(f"Delete What?")
-    else:
+    try:
+        if len(args) < 2:
+            raise
+        if args[0] not in searchList.keys():
+            raise
         response = ""
-        for arg in args:
-            if arg in searchList:
-                searchList.remove(arg)
+        for arg in args[1:]:
+            if arg in searchList[args[0]]:
+                searchList[args[0]].remove(arg)
                 response = (
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
         print(
-            json.dumps({"keyWord": searchList}, ensure_ascii=False),
+            json.dumps(searchList, ensure_ascii=False),
             end="",
             file=open("json/search.json", "w", encoding="utf-8"),
         )
@@ -76,6 +96,19 @@ async def delete(ctx, *args):
             await ctx.send(f"Delete Nothing!")
         else:
             await ctx.send(f"Delete {response} success!")
+    except:
+        embed = discord.Embed(
+            title="How to use **delete** command",
+            description="/delete [category] [keyWord] [keyWord] ...",
+            color=discord.Colour.orange(),
+        )
+        embed.add_field(
+            name="[category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+        )
+        embed.add_field(
+            name="[keyWord]", value="What keyword you want to delete", inline=False
+        )
+        await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -105,9 +138,7 @@ async def help(ctx, *args):
 
 
 async def sendAritcle(pageID, articleData, historyData):
-    if searchList == []:
-        return
-    for search in searchList:
+    for search in searchList[articleData["category"]]:
         if not search in articleData["title"]:
             continue
         historyData[pageID] = articleData
@@ -119,6 +150,7 @@ async def sendAritcle(pageID, articleData, historyData):
             url=articleData["url"],
             color=discord.Colour.orange(),
         )
+        embed.add_field(name="Category", value=articleData["category"], inline=True)
         embed.add_field(name="Author", value=articleData["author"], inline=True)
         embed.add_field(name="Date", value=articleData["date"], inline=True)
         returnString = ""
@@ -128,7 +160,7 @@ async def sendAritcle(pageID, articleData, historyData):
         embed.add_field(
             name="KeyWord",
             value=returnString,
-            inline=False,
+            inline=True,
         )
         embed.set_footer(text=f"{nowTime()}")
         await channel.send(embed=embed)
@@ -140,32 +172,36 @@ async def autoSend():
     print(nowTime(), "autoSend")
     with open("json/history.json", "r", encoding="utf-8") as f:
         historyData = json.load(f)
-    url = "https://www.ptt.cc/bbs/HardwareSale/index.html"
-    r = requests.get(url, headers=headers)
-    soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
-    articles = soup.find_all("div", class_="r-ent")
-    for article in articles:
-        url = article.find("a")["href"] if article.find("a") else ""
-        if url == "":
+    for key in searchList:
+        if searchList[key] == []:
             continue
-        title = article.find("div", class_="title").text.strip()
-        if "[公告]" in title:
-            continue
-        if "刪除" in title:
-            continue
-        if "徵" in title:
-            continue
-        pageID = url.split("/")[-1].split(".html")[0]
-        userID = article.find("div", class_="author").text.strip()
-        if pageID in historyData:
-            continue
-        articleData = {
-            "title": title,
-            "url": "https://www.ptt.cc" + url,
-            "author": userID,
-            "date": article.find("div", class_="date").text.strip(),
-        }
-        await sendAritcle(pageID, articleData, historyData)
+        url = f"https://www.ptt.cc/bbs/{key}/index.html"
+        r = requests.get(url, headers=headers)
+        soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
+        articles = soup.find_all("div", class_="r-ent")
+        for article in articles:
+            url = article.find("a")["href"] if article.find("a") else ""
+            if url == "":
+                continue
+            title = article.find("div", class_="title").text.strip()
+            if "[公告]" in title:
+                continue
+            if "刪除" in title:
+                continue
+            if "徵" in title:
+                continue
+            pageID = url.split("/")[-1].split(".html")[0]
+            userID = article.find("div", class_="author").text.strip()
+            if pageID in historyData:
+                continue
+            articleData = {
+                "title": title,
+                "url": "https://www.ptt.cc" + url,
+                "category": key,
+                "author": userID,
+                "date": article.find("div", class_="date").text.strip(),
+            }
+            await sendAritcle(pageID, articleData, historyData)
 
 
 bot.run(systemData["TOKEN"])

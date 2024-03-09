@@ -154,7 +154,7 @@ async def sendAritcle(pageID, articleData, historyData):
         embed.add_field(name="Author", value=articleData["author"], inline=True)
         embed.add_field(name="Date", value=articleData["date"], inline=True)
         returnString = ""
-        for search in searchList:
+        for search in searchList[articleData["category"]]:
             if search in articleData["title"]:
                 returnString += search + " "
         embed.add_field(
@@ -173,6 +173,7 @@ async def autoSend():
     with open("json/history.json", "r", encoding="utf-8") as f:
         historyData = json.load(f)
     for key in searchList:
+        sleep()
         if searchList[key] == []:
             continue
         url = f"https://www.ptt.cc/bbs/{key}/index.html"

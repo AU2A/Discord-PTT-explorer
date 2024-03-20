@@ -26,7 +26,7 @@ def nowTime():
 
 
 def sleep():
-    time.sleep(0.1)
+    time.sleep(0.3)
 
 
 @bot.event

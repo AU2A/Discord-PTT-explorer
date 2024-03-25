@@ -20,9 +20,9 @@ bot.remove_command("help")
 
 
 def nowTime():
-    return (datetime.datetime.utcnow() + datetime.timedelta(hours=+8)).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
+    return (
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=+8)
+    ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def sleep():
@@ -75,7 +75,7 @@ async def add(ctx, *args):
             color=discord.Colour.orange(),
         )
         embed.add_field(
-            name="[category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+            name="[ID: category]", value="0: HardwareSale\n1: Rent_tao", inline=False
         )
         embed.add_field(name="[keyWord]", value="What you want to search", inline=False)
         await ctx.send(embed=embed)
@@ -122,7 +122,7 @@ async def delete(ctx, *args):
             color=discord.Colour.orange(),
         )
         embed.add_field(
-            name="[category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+            name="[ID: category]", value="0: HardwareSale\n1: Rent_tao", inline=False
         )
         embed.add_field(
             name="[keyWord]", value="What keyword you want to delete", inline=False

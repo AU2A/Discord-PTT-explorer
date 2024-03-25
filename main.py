@@ -44,12 +44,18 @@ async def add(ctx, *args):
     try:
         if len(args) < 2:
             raise
-        if args[0] not in searchList.keys():
+        category = args[0]
+        if category.isnumeric():
+            categoryID = int(category)
+            if categoryID >= len(searchList):
+                raise
+            category = [*searchList][categoryID]
+        if category not in searchList.keys():
             raise
         response = ""
         for arg in args[1:]:
-            if arg not in searchList[args[0]]:
-                searchList[args[0]].append(arg)
+            if arg not in searchList[category]:
+                searchList[category].append(arg)
                 response = (
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
@@ -62,7 +68,7 @@ async def add(ctx, *args):
     except:
         embed = discord.Embed(
             title="How to use **add** command",
-            description="/add [category] [keyWord] [keyWord] ...",
+            description="/add [category/ID] [keyWord] [keyWord] ...",
             color=discord.Colour.orange(),
         )
         embed.add_field(
@@ -78,12 +84,18 @@ async def delete(ctx, *args):
     try:
         if len(args) < 2:
             raise
-        if args[0] not in searchList.keys():
+        category = args[0]
+        if category.isnumeric():
+            categoryID = int(category)
+            if categoryID >= len(searchList):
+                raise
+            category = [*searchList][categoryID]
+        if category not in searchList.keys():
             raise
         response = ""
         for arg in args[1:]:
-            if arg in searchList[args[0]]:
-                searchList[args[0]].remove(arg)
+            if arg in searchList[category]:
+                searchList[category].remove(arg)
                 response = (
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
@@ -99,7 +111,7 @@ async def delete(ctx, *args):
     except:
         embed = discord.Embed(
             title="How to use **delete** command",
-            description="/delete [category] [keyWord] [keyWord] ...",
+            description="/delete [category/ID] [keyWord] [keyWord] ...",
             color=discord.Colour.orange(),
         )
         embed.add_field(

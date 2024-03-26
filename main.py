@@ -6,7 +6,7 @@ with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
 
 with open("json/search.json", "r", encoding="utf-8") as f:
-    allSearchList = json.load(f)
+    channelSearchList = json.load(f)
 
 
 headers = {
@@ -35,16 +35,17 @@ async def on_ready():
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name="PTT /help")
     )
-    # autoSend.start()
+    autoSend.start()
 
 
 @bot.command()
-async def add(ctx, *args):
+async def a(ctx, *args):
     print(nowTime(), "add", args)
     try:
-        if ctx.channel.id not in [*allSearchList]:
-            allSearchList[ctx.channel.id] = {"HardwareSale": [], "Rent_tao": []}
-        searchList = allSearchList[ctx.channel.id]
+        channelID = str(ctx.channel.id)
+        if channelID not in [*channelSearchList]:
+            channelSearchList[channelID] = {"HardwareSale": [], "Rent_tao": []}
+        searchList = channelSearchList[channelID]
         if len(args) < 2:
             raise
         category = args[0]
@@ -63,11 +64,14 @@ async def add(ctx, *args):
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
         print(
-            json.dumps(allSearchList, ensure_ascii=False, indent=4),
+            json.dumps(channelSearchList, ensure_ascii=False, indent=4),
             end="",
             file=open("json/search.json", "w", encoding="utf-8"),
         )
-        await ctx.send(f"Add {response} success!")
+        if response == "":
+            await ctx.send(f"Add Nothing!")
+        else:
+            await ctx.send(f"Add {response} success!")
     except:
         embed = discord.Embed(
             title="How to use **add** command",
@@ -82,13 +86,14 @@ async def add(ctx, *args):
 
 
 @bot.command()
-async def delete(ctx, *args):
+async def d(ctx, *args):
     print(nowTime(), "delete", args)
     try:
-        if ctx.channel.id not in [*allSearchList]:
+        channelID = str(ctx.channel.id)
+        if channelID not in [*channelSearchList]:
             await ctx.send(f"Delete Nothing!")
             return
-        searchList = allSearchList[ctx.channel.id]
+        searchList = channelSearchList[channelID]
         if len(args) < 2:
             raise
         category = args[0]
@@ -106,8 +111,15 @@ async def delete(ctx, *args):
                 response = (
                     "`" + arg + "`" if response == "" else response + ", `" + arg + "`"
                 )
+        isEmpty = True
+        for category in searchList:
+            if searchList[category] != []:
+                isEmpty = False
+                break
+        if isEmpty:
+            del channelSearchList[channelID]
         print(
-            json.dumps(allSearchList, ensure_ascii=False, indent=4),
+            json.dumps(channelSearchList, ensure_ascii=False, indent=4),
             end="",
             file=open("json/search.json", "w", encoding="utf-8"),
         )
@@ -130,16 +142,21 @@ async def delete(ctx, *args):
         await ctx.send(embed=embed)
 
 
-# @bot.command()
-# async def list(ctx, *args):
-#     print(nowTime(), "list", args)
-#     response = (
-#         "Nothing" if len(searchList) == 0 else "`" + "`, `".join(searchList) + "`"
-#     )
-#     embed = discord.Embed(
-#         title="Search List", description=response, color=discord.Colour.orange()
-#     )
-#     await ctx.send(embed=embed)
+@bot.command()
+async def list(ctx, *args):
+    print(nowTime(), "list", args)
+    channelID = str(ctx.channel.id)
+    if channelID not in [*channelSearchList]:
+        await ctx.send(f"Nothing")
+        return
+    searchList = channelSearchList[channelID]
+    response = (
+        "Nothing" if len(searchList) == 0 else "`" + "`, `".join(searchList) + "`"
+    )
+    embed = discord.Embed(
+        title="Search List", description=response, color=discord.Colour.orange()
+    )
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -150,40 +167,41 @@ async def help(ctx, *args):
         description="What U can use",
         color=discord.Colour.orange(),
     )
-    embed.add_field(name="/add", value="Add search words", inline=False)
-    embed.add_field(name="/delete", value="Delete search words", inline=False)
-    embed.add_field(name="/list", value="Show search words", inline=False)
+    embed.add_field(name="/a", value="Add search words", inline=False)
+    embed.add_field(name="/d", value="Delete search words", inline=False)
+    embed.add_field(name="/l", value="Show search words", inline=False)
     await ctx.send(embed=embed)
 
 
-async def sendAritcle(channelID, pageID, articleData, historyData):
-    for search in allSearchList[channelID][articleData["category"]]:
-        if not search in articleData["title"]:
+async def sendAritcle(articleData):
+    for channelID in channelSearchList:
+        channelInfo = channelSearchList[channelID]
+        if channelInfo[articleData["category"]] == []:
             continue
-        historyData[pageID] = articleData
-        with open("json/history.json", "w", encoding="utf-8") as f:
-            json.dump(historyData, f, indent=4)
-        channel = bot.get_channel(channelID)
-        embed = discord.Embed(
-            title=articleData["title"],
-            url=articleData["url"],
-            color=discord.Colour.orange(),
-        )
-        embed.add_field(name="Category", value=articleData["category"], inline=True)
-        embed.add_field(name="Author", value=articleData["author"], inline=True)
-        embed.add_field(name="Date", value=articleData["date"], inline=True)
-        returnString = ""
-        for search in allSearchList[channelID][articleData["category"]]:
-            if search in articleData["title"]:
-                returnString += search + " "
-        embed.add_field(
-            name="KeyWord",
-            value=returnString,
-            inline=True,
-        )
-        embed.set_footer(text=f"{nowTime()}")
-        await channel.send(embed=embed)
-        break
+        for search in channelInfo[articleData["category"]]:
+            if not search in articleData["title"]:
+                continue
+            embed = discord.Embed(
+                title=articleData["title"],
+                url=articleData["url"],
+                color=discord.Colour.orange(),
+            )
+            embed.add_field(name="Category", value=articleData["category"], inline=True)
+            embed.add_field(name="Author", value=articleData["author"], inline=True)
+            embed.add_field(name="Date", value=articleData["date"], inline=True)
+            returnString = ""
+            for search in channelInfo[articleData["category"]]:
+                if search in articleData["title"]:
+                    returnString += search + " "
+            embed.add_field(
+                name="KeyWord",
+                value=returnString,
+                inline=True,
+            )
+            embed.set_footer(text=f"{nowTime()}")
+            channel = bot.get_channel(int(channelID))
+            await channel.send(embed=embed)
+            break
 
 
 @tasks.loop(seconds=20.0)
@@ -191,39 +209,43 @@ async def autoSend():
     print(nowTime(), "autoSend")
     with open("json/history.json", "r", encoding="utf-8") as f:
         historyData = json.load(f)
-    for channelID in allSearchList:
-        searchList = allSearchList[channelID]
-        for key in searchList:
-            sleep()
-            if searchList[key] == []:
+    if [*channelSearchList] == []:
+        return
+    keyList = [*channelSearchList[[*channelSearchList][0]]]
+    for key in keyList:
+        sleep()
+        url = f"https://www.ptt.cc/bbs/{key}/index.html"
+        r = requests.get(url, headers=headers)
+        soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
+        articles = soup.find_all("div", class_="r-ent")
+        for article in articles:
+            url = article.find("a")["href"] if article.find("a") else ""
+            if url == "":
                 continue
-            url = f"https://www.ptt.cc/bbs/{key}/index.html"
-            r = requests.get(url, headers=headers)
-            soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
-            articles = soup.find_all("div", class_="r-ent")
-            for article in articles:
-                url = article.find("a")["href"] if article.find("a") else ""
-                if url == "":
-                    continue
-                title = article.find("div", class_="title").text.strip()
-                if "[公告]" in title:
-                    continue
-                if "刪除" in title:
-                    continue
-                if "徵" in title:
-                    continue
-                pageID = url.split("/")[-1].split(".html")[0]
-                userID = article.find("div", class_="author").text.strip()
-                if pageID in historyData:
-                    continue
-                articleData = {
-                    "title": title,
-                    "url": "https://www.ptt.cc" + url,
-                    "category": key,
-                    "author": userID,
-                    "date": article.find("div", class_="date").text.strip(),
-                }
-                await sendAritcle(channelID, pageID, articleData, historyData)
+            title = article.find("div", class_="title").text.strip()
+            if "[公告]" in title:
+                continue
+            if "刪除" in title:
+                continue
+            if "徵" in title:
+                continue
+            pageID = url.split("/")[-1].split(".html")[0]
+            userID = article.find("div", class_="author").text.strip()
+            if key not in [*historyData]:
+                historyData[key] = {}
+            if pageID in historyData[key]:
+                continue
+            articleData = {
+                "title": title,
+                "url": "https://www.ptt.cc" + url,
+                "category": key,
+                "author": userID,
+                "date": article.find("div", class_="date").text.strip(),
+            }
+            historyData[key][pageID] = articleData
+            with open("json/history.json", "w", encoding="utf-8") as f:
+                json.dump(historyData, f, indent=4)
+            await sendAritcle(articleData)
 
 
 bot.run(systemData["TOKEN"])

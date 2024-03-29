@@ -215,7 +215,7 @@ async def h(ctx, *args):
     await ctx.send(embed=embed)
 
 
-async def sendArticle(articleData, channelID):
+async def sendArticle(articleData, channelID, keywordString):
     channelInfo = channelSearchList[channelID]
     embed = discord.Embed(
         title=articleData["title"],
@@ -225,13 +225,9 @@ async def sendArticle(articleData, channelID):
     embed.add_field(name="Category", value=articleData["category"], inline=True)
     embed.add_field(name="Author", value=articleData["author"], inline=True)
     embed.add_field(name="Date", value=articleData["date"], inline=True)
-    returnString = ""
-    for search in channelInfo[articleData["category"]]:
-        if search in articleData["title"]:
-            returnString += search + " "
     embed.add_field(
         name="KeyWord",
-        value=returnString,
+        value=keywordString,
         inline=True,
     )
     embed.set_footer(text=f"{nowTime()}")
@@ -244,10 +240,11 @@ async def checkArticleInChannel(articleData):
         channelInfo = channelSearchList[channelID]
         if channelInfo[articleData["category"]] == []:
             continue
+        keywordString = ""
         for search in channelInfo[articleData["category"]]:
-            if not search in articleData["title"]:
-                continue
-            await sendArticle(articleData, channelID)
+            keywordString += (search + " ") if search in articleData["title"] else ""
+        if keywordString != "":
+            await sendArticle(articleData, channelID, keywordString)
             break
 
 
@@ -259,12 +256,9 @@ async def searchArticles(articles, key):
         if url == "":
             continue
         title = article.find("div", class_="title").text.strip()
-        if "[公告]" in title:
-            continue
-        if "刪除" in title:
-            continue
-        if "徵" in title:
-            continue
+        for avoidKeyword in ["公告", "刪除", "徵"]:
+            if avoidKeyword in title:
+                continue
         pageID = url.split("/")[-1].split(".html")[0]
         userID = article.find("div", class_="author").text.strip()
         if key not in [*historyData]:

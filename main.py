@@ -215,7 +215,31 @@ async def h(ctx, *args):
     await ctx.send(embed=embed)
 
 
-async def sendAritcle(articleData):
+async def sendArticle(articleData, channelID):
+    channelInfo = channelSearchList[channelID]
+    embed = discord.Embed(
+        title=articleData["title"],
+        url=articleData["url"],
+        color=discord.Colour.orange(),
+    )
+    embed.add_field(name="Category", value=articleData["category"], inline=True)
+    embed.add_field(name="Author", value=articleData["author"], inline=True)
+    embed.add_field(name="Date", value=articleData["date"], inline=True)
+    returnString = ""
+    for search in channelInfo[articleData["category"]]:
+        if search in articleData["title"]:
+            returnString += search + " "
+    embed.add_field(
+        name="KeyWord",
+        value=returnString,
+        inline=True,
+    )
+    embed.set_footer(text=f"{nowTime()}")
+    channel = bot.get_channel(int(channelID))
+    await channel.send(embed=embed)
+
+
+async def checkArticleInChannel(articleData):
     for channelID in channelSearchList:
         channelInfo = channelSearchList[channelID]
         if channelInfo[articleData["category"]] == []:
@@ -223,34 +247,46 @@ async def sendAritcle(articleData):
         for search in channelInfo[articleData["category"]]:
             if not search in articleData["title"]:
                 continue
-            embed = discord.Embed(
-                title=articleData["title"],
-                url=articleData["url"],
-                color=discord.Colour.orange(),
-            )
-            embed.add_field(name="Category", value=articleData["category"], inline=True)
-            embed.add_field(name="Author", value=articleData["author"], inline=True)
-            embed.add_field(name="Date", value=articleData["date"], inline=True)
-            returnString = ""
-            for search in channelInfo[articleData["category"]]:
-                if search in articleData["title"]:
-                    returnString += search + " "
-            embed.add_field(
-                name="KeyWord",
-                value=returnString,
-                inline=True,
-            )
-            embed.set_footer(text=f"{nowTime()}")
-            channel = bot.get_channel(int(channelID))
-            await channel.send(embed=embed)
+            await sendArticle(articleData, channelID)
             break
+
+
+async def searchArticles(articles, key):
+    with open("json/history.json", "r", encoding="utf-8") as f:
+        historyData = json.load(f)
+    for article in articles:
+        url = article.find("a")["href"] if article.find("a") else ""
+        if url == "":
+            continue
+        title = article.find("div", class_="title").text.strip()
+        if "[公告]" in title:
+            continue
+        if "刪除" in title:
+            continue
+        if "徵" in title:
+            continue
+        pageID = url.split("/")[-1].split(".html")[0]
+        userID = article.find("div", class_="author").text.strip()
+        if key not in [*historyData]:
+            historyData[key] = {}
+        if pageID in historyData[key]:
+            continue
+        articleData = {
+            "title": title,
+            "url": "https://www.ptt.cc" + url,
+            "category": key,
+            "author": userID,
+            "date": article.find("div", class_="date").text.strip(),
+        }
+        historyData[key][pageID] = articleData
+        with open("json/history.json", "w", encoding="utf-8") as f:
+            json.dump(historyData, f, indent=4)
+        await checkArticleInChannel(articleData)
 
 
 @tasks.loop(seconds=20.0)
 async def autoSend():
     print(nowTime(), "autoSend")
-    with open("json/history.json", "r", encoding="utf-8") as f:
-        historyData = json.load(f)
     if [*channelSearchList] == []:
         return
     keyList = [*channelSearchList[[*channelSearchList][0]]]
@@ -260,34 +296,7 @@ async def autoSend():
         r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.text.encode("utf-8"), "html.parser")
         articles = soup.find_all("div", class_="r-ent")
-        for article in articles:
-            url = article.find("a")["href"] if article.find("a") else ""
-            if url == "":
-                continue
-            title = article.find("div", class_="title").text.strip()
-            if "[公告]" in title:
-                continue
-            if "刪除" in title:
-                continue
-            if "徵" in title:
-                continue
-            pageID = url.split("/")[-1].split(".html")[0]
-            userID = article.find("div", class_="author").text.strip()
-            if key not in [*historyData]:
-                historyData[key] = {}
-            if pageID in historyData[key]:
-                continue
-            articleData = {
-                "title": title,
-                "url": "https://www.ptt.cc" + url,
-                "category": key,
-                "author": userID,
-                "date": article.find("div", class_="date").text.strip(),
-            }
-            historyData[key][pageID] = articleData
-            with open("json/history.json", "w", encoding="utf-8") as f:
-                json.dump(historyData, f, indent=4)
-            await sendAritcle(articleData)
+        await searchArticles(articles, key)
 
 
 bot.run(systemData["TOKEN"])

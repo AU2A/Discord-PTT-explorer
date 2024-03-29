@@ -15,7 +15,7 @@ headers = {
 }
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix="-", intents=intents)
 bot.remove_command("help")
 
 
@@ -33,7 +33,7 @@ def sleep():
 async def on_ready():
     print(f"目前登入身份 --> {bot.user}")
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.watching, name="PTT /help")
+        activity=discord.Activity(type=discord.ActivityType.watching, name="PTT -h")
     )
     autoSend.start()
 
@@ -143,33 +143,39 @@ async def d(ctx, *args):
 
 
 @bot.command()
-async def list(ctx, *args):
+async def l(ctx, *args):
     print(nowTime(), "list", args)
     channelID = str(ctx.channel.id)
     if channelID not in [*channelSearchList]:
         await ctx.send(f"Nothing")
         return
     searchList = channelSearchList[channelID]
-    response = (
-        "Nothing" if len(searchList) == 0 else "`" + "`, `".join(searchList) + "`"
-    )
-    embed = discord.Embed(
-        title="Search List", description=response, color=discord.Colour.orange()
-    )
+    embed = discord.Embed(title="Search List", color=discord.Colour.orange())
+    for category in searchList:
+        if searchList[category] != []:
+            returnString = ""
+            for search in searchList[category]:
+                returnString = (
+                    "`" + search + "`"
+                    if returnString == ""
+                    else returnString + ", `" + search + "`"
+                )
+            embed.add_field(name=category, value=returnString, inline=False)
     await ctx.send(embed=embed)
 
 
 @bot.command()
-async def help(ctx, *args):
+async def h(ctx, *args):
     print(nowTime(), "help", args)
     embed = discord.Embed(
         title="PTT Explorer",
         description="What U can use",
         color=discord.Colour.orange(),
     )
-    embed.add_field(name="/a", value="Add search words", inline=False)
-    embed.add_field(name="/d", value="Delete search words", inline=False)
-    embed.add_field(name="/l", value="Show search words", inline=False)
+    embed.add_field(name="-a", value="Add search words", inline=False)
+    embed.add_field(name="-d", value="Delete search words", inline=False)
+    embed.add_field(name="-l", value="Show search words", inline=False)
+    embed.add_field(name="-h", value="Help", inline=False)
     await ctx.send(embed=embed)
 
 

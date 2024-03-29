@@ -8,6 +8,20 @@ with open("json/setting.json", "r", encoding="utf-8") as f:
 with open("json/search.json", "r", encoding="utf-8") as f:
     channelSearchList = json.load(f)
 
+categoryList = systemData["Category"]
+
+for channelID in channelSearchList:
+    searchList = channelSearchList[channelID]
+    for category in categoryList:
+        if category not in searchList:
+            searchList[category] = []
+    channelSearchList[channelID] = searchList
+print(
+    json.dumps(channelSearchList, ensure_ascii=False, indent=4),
+    end="",
+    file=open("json/search.json", "w", encoding="utf-8"),
+)
+
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
@@ -44,7 +58,10 @@ async def a(ctx, *args):
     try:
         channelID = str(ctx.channel.id)
         if channelID not in [*channelSearchList]:
-            channelSearchList[channelID] = {"HardwareSale": [], "Rent_tao": []}
+            channelSearchDict = {}
+            for category in categoryList:
+                channelSearchDict[category] = []
+            channelSearchList[channelID] = channelSearchDict
         searchList = channelSearchList[channelID]
         if len(args) < 2:
             raise
@@ -79,10 +96,26 @@ async def a(ctx, *args):
             color=discord.Colour.orange(),
         )
         embed.add_field(
-            name="[ID: category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+            name="[ID: category]",
+            value="0: HardwareSale\n1: Rent_tao\nUse **-c** to see more category.",
+            inline=False,
         )
         embed.add_field(name="[keyWord]", value="What you want to search", inline=False)
         await ctx.send(embed=embed)
+
+
+@bot.command()
+async def c(ctx, *args):
+    print(nowTime(), "category", args)
+    content = ""
+    for i in range(len(categoryList)):
+        content += f"{i}: {categoryList[i]}\n"
+    embed = discord.Embed(
+        title="Category List",
+        description=content,
+        color=discord.Colour.orange(),
+    )
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -134,7 +167,9 @@ async def d(ctx, *args):
             color=discord.Colour.orange(),
         )
         embed.add_field(
-            name="[ID: category]", value="0: HardwareSale\n1: Rent_tao", inline=False
+            name="[ID: category]",
+            value="0: HardwareSale\n1: Rent_tao\nUse **-c** to see more category.",
+            inline=False,
         )
         embed.add_field(
             name="[keyWord]", value="What keyword you want to delete", inline=False
@@ -173,6 +208,7 @@ async def h(ctx, *args):
         color=discord.Colour.orange(),
     )
     embed.add_field(name="-a", value="Add search words", inline=False)
+    embed.add_field(name="-c", value="List all categories", inline=False)
     embed.add_field(name="-d", value="Delete search words", inline=False)
     embed.add_field(name="-l", value="Show search words", inline=False)
     embed.add_field(name="-h", value="Help", inline=False)

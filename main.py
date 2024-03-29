@@ -36,7 +36,7 @@ bot.remove_command("help")
 def nowTime():
     return (
         datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=+8)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    ).strftime("%Y-%m-%d %H:%M")
 
 
 def sleep():

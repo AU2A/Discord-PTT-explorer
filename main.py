@@ -91,13 +91,13 @@ async def a(ctx, *args):
             await ctx.send(f"Add {response} success!")
     except:
         embed = discord.Embed(
-            title="How to use **add** command",
-            description="/add [category/ID] [keyWord] [keyWord] ...",
+            title="How to use add command",
+            description="-a [category/ID] [keyWord] [keyWord] ...",
             color=discord.Colour.orange(),
         )
         embed.add_field(
             name="[ID: category]",
-            value="0: HardwareSale\n1: Rent_tao\nUse **-c** to see more category.",
+            value="0: HardwareSale\n1: Rent_tao\nUse -c to see more category.",
             inline=False,
         )
         embed.add_field(name="[keyWord]", value="What you want to search", inline=False)
@@ -162,13 +162,13 @@ async def d(ctx, *args):
             await ctx.send(f"Delete {response} success!")
     except:
         embed = discord.Embed(
-            title="How to use **delete** command",
-            description="/delete [category/ID] [keyWord] [keyWord] ...",
+            title="How to use delete command",
+            description="-d [category/ID] [keyWord] [keyWord] ...",
             color=discord.Colour.orange(),
         )
         embed.add_field(
             name="[ID: category]",
-            value="0: HardwareSale\n1: Rent_tao\nUse **-c** to see more category.",
+            value="0: HardwareSale\n1: Rent_tao\nUse -c to see more category.",
             inline=False,
         )
         embed.add_field(
@@ -251,18 +251,22 @@ async def checkArticleInChannel(articleData):
 async def searchArticles(articles, key):
     with open("json/history.json", "r", encoding="utf-8") as f:
         historyData = json.load(f)
+    if key not in [*historyData]:
+        historyData[key] = {}
     for article in articles:
         url = article.find("a")["href"] if article.find("a") else ""
         if url == "":
             continue
         title = article.find("div", class_="title").text.strip()
+        check = False
         for avoidKeyword in ["公告", "刪除", "徵"]:
             if avoidKeyword in title:
+                check = True
                 continue
+        if check:
+            continue
         pageID = url.split("/")[-1].split(".html")[0]
         userID = article.find("div", class_="author").text.strip()
-        if key not in [*historyData]:
-            historyData[key] = {}
         if pageID in historyData[key]:
             continue
         articleData = {

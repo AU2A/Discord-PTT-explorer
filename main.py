@@ -2,6 +2,8 @@ import discord, json, requests, datetime, time
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
+import myline
+
 with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
 
@@ -31,6 +33,9 @@ headers = {
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="-", intents=intents)
 bot.remove_command("help")
+
+
+LineNotify = myline.LineNotify()
 
 
 def nowTime():
@@ -100,7 +105,11 @@ async def a(ctx, *args):
             value="0: HardwareSale\n1: Rent_tao\nUse -c to see more category.",
             inline=False,
         )
-        embed.add_field(name="[keyWord]", value="What you want to search", inline=False)
+        embed.add_field(
+            name="[keyWord]",
+            value='What you want to search.\n Use "ALL" to search all posts.',
+            inline=False,
+        )
         await ctx.send(embed=embed)
 
 
@@ -216,7 +225,12 @@ async def h(ctx, *args):
 
 
 async def sendArticle(articleData, channelID, keywordString):
-    channelInfo = channelSearchList[channelID]
+    if channelID == "Line":
+        if "停車" in articleData["title"]:
+            return
+        text = articleData["title"] + "\n" + articleData["url"]
+        LineNotify.send(text)
+        return
     embed = discord.Embed(
         title=articleData["title"],
         url=articleData["url"],
@@ -240,6 +254,9 @@ async def checkArticleInChannel(articleData):
         channelInfo = channelSearchList[channelID]
         if channelInfo[articleData["category"]] == []:
             continue
+        if "ALL" in channelInfo[articleData["category"]]:
+            await sendArticle(articleData, channelID, ".")
+            break
         keywordString = ""
         for search in channelInfo[articleData["category"]]:
             keywordString += (search + " ") if search in articleData["title"] else ""

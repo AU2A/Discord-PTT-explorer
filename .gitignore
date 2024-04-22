@@ -1,4 +1,2 @@
-*.json*
-# __pycache__/
-# .vscode
-myline.py
+__pycache__/
+.vscode/*

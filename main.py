@@ -2,8 +2,6 @@ import discord, json, requests, datetime, time
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
-import myline
-
 with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
 
@@ -35,9 +33,6 @@ bot = commands.Bot(command_prefix="-", intents=intents)
 bot.remove_command("help")
 
 
-LineNotify = myline.LineNotify()
-
-
 def nowTime():
     return (
         datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=+8)
@@ -50,7 +45,7 @@ def sleep():
 
 @bot.event
 async def on_ready():
-    print(f"目前登入身份 --> {bot.user}")
+    print(f"Login --> {bot.user}")
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name="PTT -h")
     )
@@ -225,12 +220,6 @@ async def h(ctx, *args):
 
 
 async def sendArticle(articleData, channelID, keywordString):
-    if channelID == "Line":
-        if "停車" in articleData["title"]:
-            return
-        text = articleData["title"] + "\n" + articleData["url"]
-        LineNotify.send(text)
-        return
     embed = discord.Embed(
         title=articleData["title"],
         url=articleData["url"],

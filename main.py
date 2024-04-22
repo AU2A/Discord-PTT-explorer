@@ -1,6 +1,26 @@
-import discord, json, requests, datetime, time
+import discord, json, requests, datetime, time, os
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
+
+
+if os.path.exists("json/setting.json") == False:
+    with open("json/setting.json", "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "TOKEN": "YOUR_DISCORD_BOT_TOKEN",
+                "Category": [""],
+            },
+            f,
+            indent=4,
+        )
+
+if os.path.exists("json/search.json") == False:
+    with open("json/search.json", "w", encoding="utf-8") as f:
+        json.dump({}, f, indent=4)
+
+if os.path.exists("json/history.json") == False:
+    with open("json/history.json", "w", encoding="utf-8") as f:
+        json.dump({}, f, indent=4)
 
 with open("json/setting.json", "r", encoding="utf-8") as f:
     systemData = json.load(f)
